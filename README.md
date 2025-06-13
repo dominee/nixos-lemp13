@@ -33,7 +33,7 @@ NAME             MAJ:MIN RM   SIZE RO TYPE  MOUNTPOINT
 nvme0n1          259:0    0 931.5G  0 disk
 ├─nvme0n1p1      259:1    0   512M  0 part  /boot/efi
 └─nvme0n1p2      259:2    0   931G  0 part
-  └─root         254:0    0   931G  0 crypt
+  └─crypto-root  254:0    0   931G  0 crypt
     ├─vg-swap    254:1    0    40G  0 lvm   [SWAP]
     └─vg-root    254:2    0   891G  0 lvm   /
 ```
@@ -71,6 +71,8 @@ nvme0n1     259:0    0 931.5G  0 disk
 
 ```
 
+> All the commands below in this document require root privileges so either use `sudo` or run them in a root session `sudo su`.
+
 ## Setup LUKS
 
 Encrypt the drive with LUKS2:
@@ -91,6 +93,19 @@ vgcreate lvm /dev/mapper/crypt-root
 lvcreate --size 40G --name swap lvm
 lvcreate --extents 100%FREE --name root lvm
 ```
+
+At this point `lsblk` should look like this.
+
+```
+NAME           MAJ:MIN RM   SIZE RO TYPE  MOUNTPOINTS
+nvme0n1        259:0    0 931.5G  0 disk
+├─nvme0n1p1    259:1    0   512M  0 part
+└─nvme0n1p2    259:2    0   931G  0 part
+  └─crypt-root 254:1    0   931G  0 crypt
+    ├─lvm-swap 254:2    0    40G  0 lvm
+    └─lvm-root 254:3    0   891G  0 lvm
+```
+
 ## Setup FS
 
 **Boot**
@@ -139,12 +154,14 @@ mkdir -p /mnt/var/log
 mount -o $BTRFS_OPT,subvol=@home /dev/lvm/root /mnt/home/
 mount -o $BTRFS_OPT,subvol=@nix /dev/lvm/root /mnt/nix/
 mount -o $BTRFS_OPT,subvol=@nixos-config /dev/lvm/root /mnt/etc/nixos/
-mount -o $BTRFS_OPT,subvol=@log /dev/lvm/root/mnt/var/log
+mount -o $BTRFS_OPT,subvol=@log /dev/lvm/root /mnt/var/log
 
 # Mount boot partition
 mkdir -p /mnt/boot/
 mount -o rw,noatime /dev/nvme0n1p1 /mnt/boot/
 ```
+
+
 
 ## NixOS config
 
@@ -156,66 +173,38 @@ nixos-generate-config --root /mnt
 
 Check disk UUIDs using `lsblk -f`.
 
-Changes related to `/mnt/etc/nixos/hardware-configuration.nix` sourced from `hardware-configuration_changes.nix`
 
-```toml
-{ config, lib, pkgs, ... }:
+```
+NAME           FSTYPE      FSVER            LABEL                      UUID                                   FSAVAIL FSUSE% MOUNTPOINTS
+nvme0n1
+├─nvme0n1p1    vfat        FAT32            EFI                        58D6-8CFC                                 511M     0% /mnt/boot
+└─nvme0n1p2    crypto_LUKS 2                                           ab47ed2f-4f99-4ce5-979b-ecf9ff24e54d
+  └─crypt-root LVM2_member LVM2 001                                    snWCfs-sFmY-20P1-FZ9A-j1ST-c57n-ODpWq4
+    ├─lvm-swap swap        1                                           2681194f-6e6e-4b15-9817-fecfa7a107a4                  [SWAP]
+    └─lvm-root btrfs                        NixOS                      2e4c65c4-6d57-42cd-92e6-9ece8fd70032      889G     0% /mnt/var/log
+                                                                                                                             /mnt/etc/nixos
+                                                                                                                             /mnt/nix
+                                                                                                                             /mnt/home
+                                                                                                                             /mnt
+```
 
-{
 
-  fileSystems."/" =
-    { device = "/dev/disk/by-uuid/98e0d3e3-d66e-440c-82af-4a2ccbc3bfd4";
-      fsType = "btrfs";
-      options = [ "rw" "noatime" "discard=async" "compress-force=zstd" "space_cache=v2" "commit=120" ];
-    };
+Changes related to `/mnt/etc/nixos/hardware-configuration.nix`. As the `nixos-generate-config` with all the mounted partitions, subvolumes and swap, the configuration should contain all filesystems with correct UUIDs.
+The only part left to change re mount options.
 
-  fileSystems."/home" =
-    { device = "/dev/disk/by-uuid/98e0d3e3-d66e-440c-82af-4a2ccbc3bfd4";
-      fsType = "btrfs";
-      options = [ "rw" "noatime" "discard=async" "compress-force=zstd" "space_cache=v2" "commit=120" ];
-    };
-
-  fileSystems."/nix" =
-    { device = "/dev/disk/by-uuid/98e0d3e3-d66e-440c-82af-4a2ccbc3bfd4";
-      fsType = "btrfs";
-      options = [ "rw" "noatime" "discard=async" "compress-force=zstd" "space_cache=v2" "commit=120" ];
-    };
-
-  fileSystems."/etc/nixos" =
-    { device = "/dev/disk/by-uuid/98e0d3e3-d66e-440c-82af-4a2ccbc3bfd4";
-      fsType = "btrfs";
-      options = [ "rw" "noatime" "discard=async" "compress-force=zstd" "space_cache=v2" "commit=120" ];
-      neededForBoot = true;
-    };
-
-  fileSystems."/var/log" =
-    { device = "/dev/disk/by-uuid/98e0d3e3-d66e-440c-82af-4a2ccbc3bfd4";
-      fsType = "btrfs";
-      options = [ "rw" "noatime" "discard=async" "compress-force=zstd" "space_cache=v2" "commit=120" ];
-      neededForBoot = true;
-    };
-
-  fileSystems."/boot" =
-    { device = "/dev/disk/by-uuid/C91D-901F";
-      fsType = "vfat";
-    };
-
-  swapDevices = [ { device = "/dev/disk/by-uuid/61c80561-8301-4952-b124-278544929d02"; } ];
-
-}
+```
+options = [ "rw" "noatime" "discard=async" "compress-force=zstd" "space_cache=v2" "commit=120" ];
 ```
 
 Changes related to `/etc/nixos/configuration.nix`, to create a minimalistic install.
 
-```toml
+```
 { config, pkgs, ... }:
 
 {
   imports =
     [ # Include the results of the hardware scan.
       ./hardware-configuration.nix
-      # Source changes related to FS configuration
-      ./hardware-configuration_changes.nix
     ];
 
   boot.kernelPackages = pkgs.linuxPackages_latest;
@@ -231,8 +220,8 @@ Changes related to `/etc/nixos/configuration.nix`, to create a minimalistic ins
   boot.initrd.luks.devices = {
       root = {
         # Use https://nixos.wiki/wiki/Full_Disk_Encryption
-        # Find this hash use lsblk -f. It's the UUID of nvme0n1p2
-        device = "/dev/disk/by-uuid/TO find this hash use lsblk -f. It's the UUID of nvme0n1p2";
+        # Find this hash use lsblk -f. It's the UUID of nvme0n1p2.
+        device = "/dev/disk/by-uuid/ab47ed2f-4f99-4ce5-979b-ecf9ff24e54d";
         allowDiscards = true;
         preLVM = true;
       };
