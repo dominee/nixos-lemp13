@@ -2,6 +2,7 @@
 {
   imports =
       ./hardware-configuration.nix
+      ./modules
     ];
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
@@ -22,24 +23,12 @@
   #networking.wireless.enable = false;  # Enables wireless support via wpa_supplicant.
   time.timeZone = "Europe/Bratislava";
 
-  services.pipewire = {
-    enable = true;
-    pulse.enable = true;
-  };
-  services.libinput.enable = true;
-  users.users.dominee = {
-    isNormalUser = true;
-    # Run mkpasswd -m sha-512 to generate it
-    hashedPassword = "$6$...";
-    packages = with pkgs; [
-      tree
-    ];
-  };
-  environment.systemPackages = with pkgs; [
-     wget
-     git
-     curl
-   ];
+  # incomming ssh
   services.openssh.enable = true;
   networking.firewall.allowedTCPPorts = [ 22 ];
+
+  # zram wit priority over swap
+  zramSwap.enable = true;
+  zramSwap.priority = 5;
+
 }
