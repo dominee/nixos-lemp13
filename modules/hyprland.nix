@@ -25,7 +25,8 @@
       qt5.qtwayland
       qt6.qtwayland
       # QT Theming: qt5ct qt6ct
-      qt5ct
+      # qt5ct - has been renamed to libsForQt5.qt5ct
+      libsForQt5.qt5ct
       qt6ct
       # Idle Manager: hypridle
       #swayidle
