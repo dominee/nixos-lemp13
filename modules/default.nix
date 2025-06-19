@@ -9,5 +9,6 @@
 	./packages.nix
 	./shell.nix
 	./users.nix
+	./gtk.nix
  	];
 }
