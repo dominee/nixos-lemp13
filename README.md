@@ -1,6 +1,7 @@
 # nixos-lemp13
 
-Setup of `NixOS 25.05 (Warbler)`   with disk encryption with LUKS2 on LVM and BTRFS.
+Setup of `NixOS 25.05 (Warbler)` with disk encryption with LUKS2 on LVM and BTRFS.
+Home-manager will not be used in this setup, instead `stow` managed dotfiles wll be used from [nixosdots](https://github.com/dominee/nixosdots) repo.
 
 
 ## NixOS install
