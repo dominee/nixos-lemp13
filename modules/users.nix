@@ -8,6 +8,10 @@
     packages = with pkgs; [
       tree
       stow
+      fish
+      glow
+      dysk
+      eza
     ];
   };
 }
