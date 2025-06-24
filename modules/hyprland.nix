@@ -28,6 +28,7 @@
       # qt5ct - has been renamed to libsForQt5.qt5ct
       libsForQt5.qt5ct
       qt6ct
+      libsForQt5.qtstyleplugin-kvantum
       # Idle Manager: hypridle
       #swayidle
       hypridle

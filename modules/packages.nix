@@ -10,5 +10,8 @@
       grc
       neofetch
       mc
+      tmux
+      yazi
+      spotify-player
     ];
 }

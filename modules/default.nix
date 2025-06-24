@@ -10,5 +10,6 @@
 	./shell.nix
 	./users.nix
 	./gtk.nix
+	./rice.nix
  	];
 }
