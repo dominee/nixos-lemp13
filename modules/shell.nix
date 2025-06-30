@@ -9,7 +9,7 @@
     syntaxHighlighting.enable = true;
 
     shellAliases = {
-      ll = "eza -lh";
+      ll = "eza --icons=always -lh";
       update = "sudo nixos-rebuild switch -I nixos-config=./configuration.nix";
       tree = "eza --tree";
     };
