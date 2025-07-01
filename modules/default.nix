@@ -11,5 +11,6 @@
 	./users.nix
 	./gtk.nix
 	./rice.nix
+	./yubikey.nix
  	];
 }
